@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Excel</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" media="screen" href="./css/main.css" />
+	<script src="./js/xlsx.full.min.js"></script>
+	<script src="./js/main.js"></script>
+</head>
+
+<body>
+	<h2>Excel</h2>
+	<!-- <input type="file" id="file" onchange="onChanged(this)" /> -->
+	<input type="file" id="file" />
+	<script>
+		var fileToRead = document.getElementById("file");
+
+		fileToRead.addEventListener("change", function (e) {
+			var files = e.target.files;
+			var file = files[0];
+
+			console.log('Name: ' + file.name)
+			console.log('Size: ' + file.size)
+
+			var reader = new FileReader();
+			var rABS = !!reader.readAsBinaryString;
+			reader.onload = function (e) {
+				var data = e.target.result;
+				//console.log('Data: ' + data)
+				if (!rABS) data = new Uint8Array(data);
+				var wb = XLSX.read(data, {
+					type: rABS ? 'binary' : 'array'
+				});
+				process_wb(wb);
+			};
+			if (rABS) reader.readAsBinaryString(file);
+			else reader.readAsArrayBuffer(file);
+
+		}, false);
+
+		function processWorkbook(wb) {
+			var ws = wb.Sheets[wb.SheetNames[0]];
+			console.log('JSON: ' + JSON.stringify(XLSX.utils.sheet_to_json(ws)));
+		}
+		
+		//Callback when the different input is selected
+		function onChanged(i) {
+			console.log('onChanged: ' + JSON.stringify(i.files[0]))
+			console.log('Replace: ' + i.value.replace("C: \\fakepath\\", ""))
+			convertExcelToJSON(i.value.replace("C: \\fakepath\\", ""))
+		}
+
+		//var url = "progressive.xlsx";
+		/**
+		 * Converts excel to json. Pass the url of the excel. The url can be
+		 * remote location or file path of the excel file.
+		 */
+		function convertExcelToJSON(url) {
+			console.log('URL: ' + url)
+			if (url.length === 0) {
+				console.log('Use a file')
+				return
+			}
+			/* set up async GET request */
+			var req = new XMLHttpRequest();
+			req.open("GET", url, true);
+			req.responseType = "arraybuffer";
+
+			req.onload = function (e) {
+				var data = new Uint8Array(req.response);
+				var workbook = XLSX.read(data, {
+					type: "array"
+				});
+				console.log(workbook);
+				var first_sheet_name = workbook.SheetNames[0];
+				var address_of_cell = 'A1';
+
+				/* Get worksheet */
+				var worksheet = workbook.Sheets[first_sheet_name];
+				console.log('JSON: ' + JSON.stringify(XLSX.utils.sheet_to_json(worksheet)));
+				/* Find desired cell */
+				var desired_cell = worksheet[address_of_cell];
+
+				/* Get the value */
+				var desired_value = (desired_cell ? desired_cell.v : undefined);
+				console.log('Value: ' + desired_value)
+				/* DO SOMETHING WITH workbook HERE */
+			}
+
+			req.send();
+		}
+	</script>
+</body>
+
+</html>
